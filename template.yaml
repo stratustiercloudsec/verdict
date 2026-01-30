@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: AI Script Coverage Pipeline - Verdict Platform
+
+Resources:
+  # 1. S3 Vector Bucket (The Cost-Effective Storage)
+  VerdictVectorBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub 'verdict-vectors-${AWS::AccountId}'
+
+  # 2. DynamoDB for Report Metadata
+  VerdictReportTable:
+    Type: 'AWS::Serverless::SimpleTable'
+    Properties:
+      PrimaryKey:
+        Name: ScriptId
+        Type: String
+
+  # 3. Lambda: Creative Synthesizer (The Core AI logic)
+  VerdictCreativeSynthesizer:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs20.x
+      CodeUri: ./functions/creative-synthesizer/
+      Timeout: 60
+      Policies:
+        # Crucial: Permission to invoke Bedrock
+        - Statement:
+            - Effect: Allow
+              Action: 'bedrock:InvokeModel'
+              Resource: '*'
+        # Permission to read from the Vector Bucket
+        - S3ReadPolicy:
+            BucketName: !Sub 'verdict-vectors-${AWS::AccountId}'
+        - DynamoDBCrudPolicy:
+            TableName: !Ref VerdictReportTable
+
+  # 4. React UI Hosting (S3 + CloudFront)
+  VerdictUiBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+
+  VerdictCloudFront:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt VerdictUiBucket.DomainName
+            Id: ReactUIOrigin
+            S3OriginConfig: {}
+        Enabled: true
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+            TargetOriginId: ReactUIOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            ForwardedValues:
+                QueryString: false
+
+Outputs:
+  CloudFrontURL:
+    Description: "The URL of your React UI"
+    Value: !GetAtt VerdictCloudFront.DomainName
