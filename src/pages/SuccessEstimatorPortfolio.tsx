@@ -33,20 +33,19 @@ const SuccessEstimatorPortfolio = () => {
     fetchPortfolio();
   }, []);
 
-  // --- NEW: REDRIVE HANDLER ---
+  // --- REDRIVE HANDLER ---
   const handleRedrive = async (auditId: string, projectName: string) => {
     setIsRedriving(auditId);
     try {
       const response = await fetch('https://jdig9yqazd.execute-api.us-east-1.amazonaws.com/prod/analyze', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Trigger a re-run using the existing keys
         body: JSON.stringify({ auditId, projectName, isRedrive: true }),
       });
 
       if (response.ok) {
         alert(`Synthesis restarted for: ${projectName}. Please allow 30 seconds for AI research.`);
-        window.location.reload(); // Refresh to update status to PROCESSING
+        window.location.reload(); 
       } else {
         throw new Error("Failed to initiate Redrive.");
       }
@@ -58,14 +57,14 @@ const SuccessEstimatorPortfolio = () => {
     }
   };
 
-  // Adjusted grid for the additional "Rerun" column
-  const gridLayout = "grid grid-cols-3 sm:grid-cols-[1.5fr_3fr_1.5fr_1fr_1fr_1fr_0.5fr] items-center";
+  const gridLayout = "grid grid-cols-3 sm:grid-cols-[1.5fr_3fr_1.5fr_1fr_1fr_0.5fr] items-center";
 
   return (
     <>
       <Breadcrumb pageName="Success Intelligence Portfolio" />
       <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
         <div className="flex flex-col">
+          
           {/* TABLE HEADER */}
           <div className={`rounded-sm bg-gray-2 dark:bg-meta-4 ${gridLayout}`}>
             <div className="p-2.5 xl:p-5 text-xs font-bold uppercase tracking-widest text-black dark:text-white">Audit ID</div>
@@ -73,7 +72,6 @@ const SuccessEstimatorPortfolio = () => {
             <div className="hidden sm:block p-2.5 text-center text-xs font-bold uppercase tracking-widest text-black dark:text-white">Status</div>
             <div className="hidden sm:block p-2.5 text-center text-xs font-bold uppercase tracking-widest text-black dark:text-white">Verdict</div>
             <div className="hidden sm:block p-2.5 text-center text-xs font-bold uppercase tracking-widest text-black dark:text-white">Score</div>
-            <div className="hidden sm:block p-2.5 text-center text-xs font-bold uppercase tracking-widest text-black dark:text-white">PDF</div>
             <div className="p-2.5 text-center text-xs font-bold uppercase tracking-widest text-black dark:text-white">Act</div>
           </div>
 
@@ -117,21 +115,16 @@ const SuccessEstimatorPortfolio = () => {
 
                 {/* VERDICT */}
                 <div className="hidden sm:flex justify-center p-2.5 font-black text-xs">
-                   {record.verdict || '--'}
+                    {record.verdict || '--'}
                 </div>
 
-                {/* SCORE */}
-                <div className="hidden sm:flex justify-center p-2.5 font-black text-meta-3">
+                {/* SCORE (Logic updated for dynamic color coding) */}
+                <div className={`hidden sm:flex justify-center p-2.5 font-black ${
+                  record.status === 'COMPLETED' 
+                    ? (record.verdict === 'PASS' ? 'text-meta-3' : 'text-danger') 
+                    : 'text-gray-400'
+                }`}>
                   {record.status === 'COMPLETED' ? `${record.score}%` : '--'}
-                </div>
-
-                {/* PDF ICON */}
-                <div className="hidden sm:flex justify-center p-2.5">
-                  {record.status === 'COMPLETED' ? (
-                    <svg className="fill-primary" width="18" height="18" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                  ) : (
-                    <span className="text-[10px] opacity-20 italic">Pending</span>
-                  )}
                 </div>
 
                 {/* REDRIVE ACTION */}

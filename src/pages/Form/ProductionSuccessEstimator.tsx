@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumb from '../../components/Breadcrumbs/Breadcrumb';
+// Note: Ensure react-feather is installed (npm install react-feather)
+import { Zap, UploadCloud } from 'react-feather';
 
 type WorkflowStatus = 'IDLE' | 'PROCESSING' | 'ERROR';
 
@@ -40,7 +42,6 @@ const ProductionSuccessEstimator: React.FC = () => {
     "South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","District of Columbia"
   ];
 
-  // Updated Top 10 Genre List based on PM strategic assessment
   const genres = [
     "Action", "Animation", "Comedy", "Documentary", "Drama", "Fantasy", "Horror", "Romance", "Sci-Fi", "Thriller"
   ];
@@ -96,12 +97,17 @@ const ProductionSuccessEstimator: React.FC = () => {
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
-  // --- STYLING CONSTANTS ---
+  // --- STYLING CONSTANTS (Updated to Verdict Green [meta-3]) ---
   const highlightVal = "font-bold text-meta-3 ml-1";
-  const inputClass = "w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary";
-  const labelClass = "mb-3 block text-black dark:text-white font-bold uppercase text-[10px] tracking-widest";
+  const inputClass = "w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 text-black outline-none transition focus:border-meta-3 active:border-meta-3 disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-meta-3";
+  const labelClass = "mb-3 block text-black dark:text-white font-bold uppercase text-[10px] tracking-widest flex items-center";
   const cardClass = "rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-9 overflow-hidden";
   const cardHeaderClass = "border-b border-stroke py-4 px-6.5 dark:border-strokedark bg-gray-2 dark:bg-meta-4";
+
+  // Red Required Icon Component
+  const RequiredIcon = () => (
+    <span className="text-red-500 text-xl font-bold ml-1 leading-none">*</span>
+  );
 
   return (
     <>
@@ -110,7 +116,7 @@ const ProductionSuccessEstimator: React.FC = () => {
       {/* DOCUMENT UPLOAD SECTION */}
       <div className={cardClass}>
         <div className={cardHeaderClass}>
-          <h3 className="font-bold text-black dark:text-white uppercase tracking-widest text-xs">
+          <h3 className="font-bold text-black dark:text-white uppercase tracking-widest text-xs text-meta-3">
             Budget Documentation
           </h3>
         </div>
@@ -118,12 +124,13 @@ const ProductionSuccessEstimator: React.FC = () => {
           <p className="text-sm text-body dark:text-bodydark italic font-medium leading-relaxed">
             Anchor the Success Analysis in your primary financial data. Upload a Top Sheet or Production Budget to begin.
           </p>
-          <div>
+          <div className="relative">
             <input
               type="file"
               onChange={handleFileChange}
-              className="w-full cursor-pointer rounded-lg border-[1.5px] border-stroke bg-transparent outline-none transition file:mr-5 file:border-0 file:border-r file:border-solid file:border-stroke file:bg-whiter file:py-3 file:px-5 file:hover:bg-primary file:hover:bg-opacity-10 focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input"
+              className="w-full cursor-pointer rounded-lg border-[1.5px] border-stroke bg-transparent outline-none transition file:mr-5 file:border-0 file:bg-meta-3 file:text-white file:py-3 file:px-5 file:hover:bg-opacity-90 focus:border-meta-3 active:border-meta-3 dark:border-form-strokedark dark:bg-form-input"
             />
+            <UploadCloud className="absolute right-4 top-1/2 -translate-y-1/2 text-black/20" size={20} />
           </div>
         </div>
       </div>
@@ -133,16 +140,16 @@ const ProductionSuccessEstimator: React.FC = () => {
         <div className="flex flex-col">
           <div className={cardClass}>
             <div className={cardHeaderClass}>
-              <h3 className="font-bold text-black dark:text-white uppercase tracking-widest text-xs text-primary">Core Production</h3>
+              <h3 className="font-bold text-meta-3 uppercase tracking-widest text-xs">Core Production</h3>
             </div>
             <div className="flex flex-col gap-5.5 p-6.5">
               <div>
-                <label className={labelClass}>Project Title</label>
+                <label className={labelClass}>Project Title <RequiredIcon /></label>
                 <input type="text" name="projectName" placeholder="Project Name" value={formData.projectName} onChange={handleInputChange} className={inputClass} />
               </div>
               
               <div>
-                <label className={labelClass}>Genre</label>
+                <label className={labelClass}>Genre <RequiredIcon /></label>
                 <select name="genre" value={formData.genre} onChange={handleInputChange} className={inputClass}>
                   {genres.map((g) => (
                     <option key={g} value={g}>{g}</option>
@@ -151,24 +158,24 @@ const ProductionSuccessEstimator: React.FC = () => {
               </div>
 
               <div>
-                <label className={labelClass}>Production Media</label>
+                <label className={labelClass}>Production Media <RequiredIcon /></label>
                 <div className="flex items-center gap-10 mt-2">
-                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-black dark:text-white uppercase">
-                    <input type="radio" name="productionType" value="Cinema" checked={formData.productionType === 'Cinema'} onChange={handleInputChange} className="h-4 w-4 accent-primary" /> Cinema
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-black dark:text-white uppercase hover:text-meta-3 transition">
+                    <input type="radio" name="productionType" value="Cinema" checked={formData.productionType === 'Cinema'} onChange={handleInputChange} className="h-5 w-5 accent-meta-3" /> Cinema
                   </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-black dark:text-white uppercase">
-                    <input type="radio" name="productionType" value="Television" checked={formData.productionType === 'Television'} onChange={handleInputChange} className="h-4 w-4 accent-primary" /> Television
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-black dark:text-white uppercase hover:text-meta-3 transition">
+                    <input type="radio" name="productionType" value="Television" checked={formData.productionType === 'Television'} onChange={handleInputChange} className="h-5 w-5 accent-meta-3" /> Television
                   </label>
                 </div>
               </div>
               <div>
-                <label className={labelClass}>Release Strategy</label>
+                <label className={labelClass}>Release Strategy <RequiredIcon /></label>
                 <div className="flex items-center gap-10 mt-2">
-                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-black dark:text-white uppercase">
-                    <input type="radio" name="releaseType" value="Theatrical" checked={formData.releaseType === 'Theatrical'} onChange={handleInputChange} className="h-4 w-4 accent-primary" /> Theatrical
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-black dark:text-white uppercase hover:text-meta-3 transition">
+                    <input type="radio" name="releaseType" value="Theatrical" checked={formData.releaseType === 'Theatrical'} onChange={handleInputChange} className="h-5 w-5 accent-meta-3" /> Theatrical
                   </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-black dark:text-white uppercase">
-                    <input type="radio" name="releaseType" value="Streaming" checked={formData.releaseType === 'Streaming'} onChange={handleInputChange} className="h-4 w-4 accent-primary" /> Streaming
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-black dark:text-white uppercase hover:text-meta-3 transition">
+                    <input type="radio" name="releaseType" value="Streaming" checked={formData.releaseType === 'Streaming'} onChange={handleInputChange} className="h-5 w-5 accent-meta-3" /> Streaming
                   </label>
                 </div>
               </div>
@@ -177,7 +184,7 @@ const ProductionSuccessEstimator: React.FC = () => {
                   Production Budget 
                   <span className={highlightVal}>{formatCurrency(Number(formData.productionBudget))}</span>
                 </label>
-                <input type="range" name="productionBudget" min="100000" max="400000000" step="100000" value={formData.productionBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-primary" />
+                <input type="range" name="productionBudget" min="100000" max="400000000" step="100000" value={formData.productionBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-meta-3" />
               </div>
             </div>
           </div>
@@ -191,7 +198,7 @@ const ProductionSuccessEstimator: React.FC = () => {
                 Marketing Allocation 
                 <span className={highlightVal}>{formatCurrency(Number(formData.marketingBudget))}</span>
               </label>
-              <input type="range" name="marketingBudget" min="25000" max="100000000" step="25000" value={formData.marketingBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-primary" />
+              <input type="range" name="marketingBudget" min="25000" max="100000000" step="25000" value={formData.marketingBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-meta-3" />
             </div>
           </div>
 
@@ -206,7 +213,7 @@ const ProductionSuccessEstimator: React.FC = () => {
               </div>
               <div>
                 <label className={labelClass}>Cast Market Strength ({formData.castStrength}/10)</label>
-                <input type="range" name="castStrength" min="1" max="10" value={formData.castStrength} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-primary" />
+                <input type="range" name="castStrength" min="1" max="10" value={formData.castStrength} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-meta-3" />
               </div>
             </div>
           </div>
@@ -214,13 +221,14 @@ const ProductionSuccessEstimator: React.FC = () => {
           <button 
             onClick={handleAnalyze}
             disabled={isAnalyzing}
-            className="flex w-full justify-center rounded bg-primary p-4 font-black uppercase tracking-[0.3em] text-white hover:bg-opacity-90 disabled:bg-opacity-50 shadow-2xl transition-all mb-10"
+            className="flex w-full items-center justify-center gap-3 rounded bg-meta-3 p-4 font-black uppercase tracking-[0.2em] text-white hover:bg-opacity-90 disabled:bg-opacity-50 shadow-2xl transition-all mb-10"
           >
+            <Zap size={20} fill="currentColor" />
             {isAnalyzing ? 'Processing Model...' : 'Execute Success Analysis'}
           </button>
         </div>
 
-        {/* --- RIGHT COLUMN: LOGISTICS & CONTEXT --- */}
+        {/* --- RIGHT COLUMN: LOGISTICS & TECHNICAL --- */}
         <div className="flex flex-col">
           <div className={cardClass}>
             <div className={cardHeaderClass}>
@@ -258,7 +266,7 @@ const ProductionSuccessEstimator: React.FC = () => {
                   Local Production Spend 
                   <span className={highlightVal}>{formatCurrency(Number(formData.locationBudget))}</span>
                 </label>
-                <input type="range" name="locationBudget" min="100000" max="20000000" step="100000" value={formData.locationBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-primary" />
+                <input type="range" name="locationBudget" min="100000" max="20000000" step="100000" value={formData.locationBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-meta-3" />
               </div>
             </div>
           </div>
@@ -270,12 +278,12 @@ const ProductionSuccessEstimator: React.FC = () => {
             <div className="flex flex-col gap-5.5 p-6.5">
                 <div>
                     <label className={labelClass}>Sound & Mix Budget <span className={highlightVal}>{formatCurrency(Number(formData.soundBudget))}</span></label>
-                    <input type="range" name="soundBudget" min="10000" max="1000000" step="10000" value={formData.soundBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-primary" />
+                    <input type="range" name="soundBudget" min="10000" max="1000000" step="10000" value={formData.soundBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-meta-3" />
                 </div>
                 <div><label className={labelClass}>Lead Stylist / Wardrobe</label><input type="text" name="leadStylist" placeholder="Lead Stylist" value={formData.leadStylist} onChange={handleInputChange} className={inputClass} /></div>
                 <div>
                     <label className={labelClass}>Wardrobe Allocation <span className={highlightVal}>{formatCurrency(Number(formData.wardrobeBudget))}</span></label>
-                    <input type="range" name="wardrobeBudget" min="10000" max="100000" step="1000" value={formData.wardrobeBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-primary" />
+                    <input type="range" name="wardrobeBudget" min="10000" max="100000" step="1000" value={formData.wardrobeBudget} onChange={handleInputChange} className="w-full cursor-pointer appearance-none rounded-lg bg-stroke dark:bg-form-strokedark h-2 accent-meta-3" />
                 </div>
             </div>
           </div>

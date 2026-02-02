@@ -3,6 +3,7 @@ import { useParams, useLocation } from 'react-router-dom';
 import Breadcrumb from '../components/Breadcrumbs/Breadcrumb';
 import html2canvas from 'html2canvas'; 
 import { jsPDF } from 'jspdf';
+import { FileText, Download } from 'react-feather';
 
 const EstimatorDetail: React.FC = () => {
   const { auditId } = useParams<{ auditId: string }>();
@@ -38,7 +39,6 @@ const EstimatorDetail: React.FC = () => {
     pdf.save(`${projectName}_Analysis.pdf`);
   };
 
-  // --- BULLETPROOF RENDERER ---
   const renderMarketComps = () => {
     let list: any[] = [];
     try {
@@ -56,7 +56,7 @@ const EstimatorDetail: React.FC = () => {
               <span className="text-white font-black text-sm uppercase">
                 {comp.TITLE || comp.title || "Unknown Movie"}
               </span>
-              <span className="text-blue-400 font-black text-xs">
+              <span className="text-meta-3 font-black text-xs">
                 {comp.BOXOFFICE || comp.boxOffice || "N/A"}
               </span>
             </div>
@@ -69,42 +69,71 @@ const EstimatorDetail: React.FC = () => {
     );
   };
 
-  if (isPolling || !analysisData) return <div className="p-20 text-center animate-pulse text-primary font-black uppercase">Synthesizing...</div>;
+  if (isPolling || !analysisData) return <div className="p-20 text-center animate-pulse text-meta-3 font-black uppercase">Synthesizing Executive Verdict...</div>;
 
   return (
     <>
       <Breadcrumb pageName="Success Estimator Report" />
-      <div ref={reportRef} className="mx-auto max-w-270 bg-white dark:bg-boxdark p-10 rounded-sm shadow-xl border border-stroke mb-10 overflow-hidden">
-        <div className="flex justify-between items-center mb-10 border-b-2 border-primary pb-8">
+
+      {/* --- EXTERNAL ACTION BAR: Excluded from reportRef --- */}
+      <div className="flex justify-end mb-4">
+        <button 
+          onClick={handleDownloadPDF} 
+          className="flex items-center gap-2 bg-meta-3 text-white px-6 py-3 rounded font-black uppercase text-xs tracking-widest hover:bg-opacity-90 shadow-lg transition-all"
+        >
+          <Download size={16} />
+          Export Executive PDF
+        </button>
+      </div>
+
+      {/* --- WIDER CARD AREA: Removed max-w-270 constraint --- */}
+      <div 
+        ref={reportRef} 
+        className="w-full bg-white dark:bg-boxdark p-10 rounded-sm shadow-xl border border-stroke mb-10 overflow-hidden"
+      >
+        {/* Report Header */}
+        <div className="flex justify-between items-end mb-10 border-b-2 border-meta-3 pb-8">
           <div>
-            <h4 className="text-[10px] font-black uppercase text-gray-400 mb-1">Project Name</h4>
-            <h1 className="text-3xl font-black uppercase">{analysisData.projectName}</h1>
+            <h4 className="text-[10px] font-black uppercase text-gray-400 mb-1 tracking-[0.2em]">Project Identification</h4>
+            <h1 className="text-4xl font-black uppercase text-black dark:text-white">{analysisData.projectName}</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={handleDownloadPDF} className="bg-black text-white px-6 py-2 rounded font-black uppercase text-[10px]">Export PDF</button>
-            <div className={`px-8 py-2 border-2 font-black text-xl ${analysisData.verdict === 'PASS' ? 'text-success border-success' : 'text-danger border-danger'}`}>VERDICT: {analysisData.verdict}</div>
+          <div className={`px-10 py-3 border-2 font-black text-2xl tracking-tighter ${analysisData.verdict === 'PASS' ? 'text-success border-success' : 'text-danger border-danger'}`}>
+            VERDICT: {analysisData.verdict}
           </div>
         </div>
 
+        {/* Scoring & Market Comps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
-           <div className="bg-gray-50 dark:bg-meta-4 p-10 rounded-lg text-center border-2 border-stroke shadow-inner">
-              <h4 className="text-xs font-black uppercase text-gray-400 mb-4">Success Probability</h4>
-              <span className="text-8xl font-black text-primary">{analysisData.score}%</span>
+           <div className="bg-gray-50 dark:bg-meta-4 p-12 rounded-lg text-center border-2 border-stroke shadow-inner flex flex-col justify-center">
+              <h4 className="text-xs font-black uppercase text-gray-400 mb-6 tracking-widest">Success Probability</h4>
+              <span className="text-[10rem] leading-none font-black text-meta-3">{analysisData.score}%</span>
            </div>
-           <div className="bg-black p-8 rounded-lg shadow-2xl relative min-h-[300px]">
-              <h4 className="text-xs font-black uppercase text-blue-400 tracking-[0.3em] mb-6 border-b border-white/10 pb-2">Market Comps</h4>
+           <div className="bg-black p-8 rounded-lg shadow-2xl relative min-h-[350px]">
+              <h4 className="text-xs font-black uppercase text-meta-3 tracking-[0.4em] mb-6 border-b border-white/10 pb-3 flex items-center gap-2">
+                <FileText size={14} /> Market Comps
+              </h4>
               {renderMarketComps()}
            </div>
         </div>
 
+        {/* Narrative Analysis */}
         <div className="mb-12">
-           <h3 className="mb-4 text-xs font-black uppercase text-primary tracking-widest">Executive Analysis</h3>
-           <div className="text-lg leading-loose font-serif italic bg-gray-50 dark:bg-meta-4 p-10 rounded border-l-8 border-primary">{analysisData.summary}</div>
+            <h3 className="mb-4 text-xs font-black uppercase text-meta-3 tracking-widest">Executive Summary</h3>
+            <div className="text-xl leading-relaxed font-serif italic bg-gray-50 dark:bg-meta-4 p-10 rounded border-l-8 border-meta-3 text-black dark:text-white shadow-sm">
+              {analysisData.summary}
+            </div>
         </div>
 
+        {/* Strategic Roadmap */}
         <div>
-           <h3 className="mb-4 text-xs font-black uppercase text-gray-400 tracking-widest">Strategic Recommendations</h3>
-           <div className="bg-gray-100 dark:bg-meta-4 p-10 rounded border-l-8 border-black font-semibold">{analysisData.recommendations}</div>
+            <h3 className="mb-4 text-xs font-black uppercase text-gray-400 tracking-widest">Strategic Recommendations</h3>
+            <div className="bg-gray-100 dark:bg-meta-4 p-10 rounded border-l-8 border-black font-semibold text-black dark:text-white">
+              {analysisData.recommendations}
+            </div>
+        </div>
+
+        <div className="mt-12 pt-8 border-t border-stroke text-center">
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">© Verdict AI Intelligence Platform | Production Analytics Division</p>
         </div>
       </div>
     </>

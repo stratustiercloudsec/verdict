@@ -22,7 +22,14 @@ import DefaultLayout from './layout/DefaultLayout';
 import EstimatorDetail  from './pages/EstimatorDetail';
 import AuditDetail  from './pages/AuditDetail';
 import SuccessEstimatorPortfolio  from './pages/SuccessEstimatorPortfolio';
+import ProductVision from './pages/ProductVision';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import Contact from './pages/Contact';
+import SubmissionSuccess from './pages/SubmissionSuccess';
 
+// 1. Import your new MainPage component
+import MainPage from './pages/MainPage'; 
 
 function App() {
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,15 +48,28 @@ function App() {
   ) : (
     <DefaultLayout>
       <Routes>
+        {/* 2. Set MainPage as the default Home route */}
         <Route
           index
           element={
             <>
-              <PageTitle title="eCommerce Dashboard | TailAdmin - Tailwind CSS Admin Dashboard Template" />
+              <PageTitle title="Home | Verdict - Greenlight Production Intelligence Platform" />
+              <MainPage />
+            </>
+          }
+        />
+
+        {/* 3. Keep ECommerce accessible via /dashboard for your sidebar links */}
+        <Route
+          path="/dashboard"
+          element={
+            <>
+              <PageTitle title="eCommerce Dashboard | Verdict - Greenlight Production Intelligence Platform" />
               <ECommerce />
             </>
           }
         />
+
         <Route
           path="/calendar"
           element={
@@ -137,6 +157,51 @@ function App() {
             <>
                <PageTitle title="Success Estimator Portfolio | Verdict - Greenlight Production Intelligence Platform" />
                <SuccessEstimatorPortfolio/>
+            </>
+          }
+        />
+        <Route
+          path="/product-vision"
+          element={
+            <>
+              <PageTitle title="Product Vision | Verdict - Greenlight Production Intelligence Platform" />
+              <ProductVision />
+            </>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <>
+              <PageTitle title="Contact StratusTier | Verdict AI" />
+              <Contact />
+            </>
+          }
+        />
+        <Route
+          path="/terms-of-service"
+          element={
+            <>
+              <PageTitle title="Product Vision | Verdict - Greenlight Production Intelligence Platform" />
+              <TermsOfService />
+            </>
+          }
+        />
+        <Route
+          path="/privacy-policy"
+          element={
+            <>
+              <PageTitle title="Product Vision | Verdict - Greenlight Production Intelligence Platform" />
+              <PrivacyPolicy />
+            </>
+          }
+        />
+        <Route
+          path="/contact/success"
+          element={
+            <>
+              <PageTitle title="Submission Success | Verdict - Greenlight Production Intelligence Platform" />
+              <SubmissionSuccess />
             </>
           }
         />
