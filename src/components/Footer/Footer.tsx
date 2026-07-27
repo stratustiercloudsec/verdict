@@ -16,7 +16,7 @@ const Footer = () => {
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-gray-500 dark:text-bodydark2">
           <span>Engineered by</span>
           <a 
-            href="https://stratustier.com" 
+            href="https://stratustierlabs.com" 
             target="_blank" 
             rel="noopener noreferrer"
             className="font-black text-black hover:text-primary dark:text-white dark:hover:text-primary transition-all duration-300 ease-in-out"

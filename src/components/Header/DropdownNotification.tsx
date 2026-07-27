@@ -1,30 +1,218 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import ClickOutside from '../ClickOutside';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+const API_BASE = 'https://jdig9yqazd.execute-api.us-east-1.amazonaws.com/prod';
+const STORAGE_KEY = 'verdict_notifications';
+const POLL_INTERVAL_MS = 10000; // Poll every 10 seconds
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type JobType = 'coverage' | 'estimator';
+type JobStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'ERROR';
+
+interface NotificationJob {
+  id: string;           // auditId
+  type: JobType;
+  projectName: string;
+  status: JobStatus;
+  timestamp: string;    // ISO string — when submitted
+  completedAt?: string; // ISO string — when COMPLETED
+  seen: boolean;        // whether user has opened the dropdown since completion
+  score?: number;
+  title?: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Read all tracked jobs from localStorage */
+function loadJobs(): NotificationJob[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Persist jobs to localStorage */
+function saveJobs(jobs: NotificationJob[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+}
+
+/**
+ * Public helper — call this from CoverageReport.tsx and
+ * ProductionSuccessEstimator.tsx right after receiving the auditId
+ * so the notification system starts tracking it immediately.
+ *
+ * Usage:
+ *   import { registerNotificationJob } from '../components/Header/DropdownNotification';
+ *   registerNotificationJob({ id: auditId, type: 'coverage', projectName: 'Heat' });
+ */
+export function registerNotificationJob(job: {
+  id: string;
+  type: JobType;
+  projectName: string;
+}): void {
+  const jobs = loadJobs();
+  // Avoid duplicates
+  if (jobs.find((j) => j.id === job.id)) return;
+  jobs.unshift({
+    ...job,
+    status: 'QUEUED',
+    timestamp: new Date().toISOString(),
+    seen: false,
+  });
+  // Keep only the latest 20 jobs
+  saveJobs(jobs.slice(0, 20));
+}
+
+/** Format ISO timestamp → human-readable "12 May, 2025" */
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
+/** Status pill colour */
+function statusColor(status: JobStatus): string {
+  switch (status) {
+    case 'COMPLETED': return 'text-meta-3';           // green
+    case 'QUEUED':
+    case 'PROCESSING': return 'text-warning';          // amber
+    case 'FAILED':
+    case 'ERROR': return 'text-meta-1';                // red
+    default: return 'text-bodydark';
+  }
+}
+
+/** Feature icon */
+function typeIcon(type: JobType): string {
+  return type === 'coverage' ? '📄' : '📊';
+}
+
+/** Feature label */
+function typeLabel(type: JobType): string {
+  return type === 'coverage' ? 'Coverage Report' : 'Success Estimator';
+}
+
+/** Deep-link destination once COMPLETED */
+function detailLink(job: NotificationJob): string {
+  if (job.type === 'coverage') {
+    return `/audit-detail/${job.id}`;
+  }
+  return `/estimator-detail/${job.id}?projectName=${encodeURIComponent(job.projectName)}`;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 const DropdownNotification = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notifying, setNotifying] = useState(true);
+  const [jobs, setJobs] = useState<NotificationJob[]>(loadJobs);
 
+  // Derived: how many unseen COMPLETED jobs exist
+  const unseenCount = jobs.filter(
+    (j) => (j.status === 'COMPLETED' || j.status === 'FAILED' || j.status === 'ERROR') && !j.seen
+  ).length;
+
+  // ── Poll active jobs ────────────────────────────────────────────────────────
+  const pollJobs = useCallback(async () => {
+    const current = loadJobs();
+    const pending = current.filter(
+      (j) => j.status === 'QUEUED' || j.status === 'PROCESSING'
+    );
+    if (!pending.length) return;
+
+    const updated = [...current];
+
+    await Promise.allSettled(
+      pending.map(async (job) => {
+        try {
+          let url = '';
+          if (job.type === 'coverage') {
+            url = `${API_BASE}/get-audit?auditId=${job.id}`;
+          } else {
+            url = `${API_BASE}/get-estimator?auditId=${job.id}&projectName=${encodeURIComponent(job.projectName)}`;
+          }
+
+          const res = await fetch(url);
+          if (!res.ok) return;
+          const data = await res.json();
+          const newStatus: JobStatus = data.status ?? 'QUEUED';
+
+          const idx = updated.findIndex((j) => j.id === job.id);
+          if (idx === -1) return;
+
+          if (newStatus !== updated[idx].status) {
+            updated[idx] = {
+              ...updated[idx],
+              status: newStatus,
+              score: data.score ?? updated[idx].score,
+              title: data.title ?? data.projectName ?? updated[idx].title,
+              completedAt:
+                newStatus === 'COMPLETED'
+                  ? new Date().toISOString()
+                  : updated[idx].completedAt,
+              // Mark unseen only when freshly completed
+              seen:
+                newStatus === 'COMPLETED' || newStatus === 'FAILED' || newStatus === 'ERROR'
+                  ? false
+                  : updated[idx].seen,
+            };
+          }
+        } catch {
+          // Network error — silently skip this cycle
+        }
+      })
+    );
+
+    saveJobs(updated);
+    setJobs([...updated]);
+  }, []);
+
+  // Start polling on mount, clear on unmount
+  useEffect(() => {
+    pollJobs(); // immediate first check
+    const interval = setInterval(pollJobs, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [pollJobs]);
+
+  // Mark all as seen when dropdown opens
+  const handleOpen = () => {
+    setDropdownOpen((prev) => {
+      const opening = !prev;
+      if (opening) {
+        const updated = loadJobs().map((j) => ({ ...j, seen: true }));
+        saveJobs(updated);
+        setJobs(updated);
+      }
+      return opening;
+    });
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <ClickOutside onClick={() => setDropdownOpen(false)} className="relative">
       <li>
+        {/* Bell button */}
         <Link
-          onClick={() => {
-            setNotifying(false);
-            setDropdownOpen(!dropdownOpen);
-          }}
+          onClick={handleOpen}
           to="#"
           className="relative flex h-8.5 w-8.5 items-center justify-center rounded-full border-[0.5px] border-stroke bg-gray hover:text-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
         >
-          <span
-            className={`absolute -top-0.5 right-0 z-1 h-2 w-2 rounded-full bg-meta-1 ${
-              notifying === false ? 'hidden' : 'inline'
-            }`}
-          >
-            <span className="absolute -z-1 inline-flex h-full w-full animate-ping rounded-full bg-meta-1 opacity-75"></span>
-          </span>
+          {/* Unread badge */}
+          {unseenCount > 0 && (
+            <span className="absolute -top-0.5 right-0 z-1 h-2 w-2 rounded-full bg-meta-1">
+              <span className="absolute -z-1 inline-flex h-full w-full animate-ping rounded-full bg-meta-1 opacity-75" />
+            </span>
+          )}
 
+          {/* Bell icon */}
           <svg
             className="fill-current duration-300 ease-in-out"
             width="18"
@@ -40,81 +228,112 @@ const DropdownNotification = () => {
           </svg>
         </Link>
 
+        {/* Dropdown panel */}
         {dropdownOpen && (
-          <div
-            className={`absolute -right-27 mt-2.5 flex h-90 w-75 flex-col rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark sm:right-0 sm:w-80`}
-          >
-            <div className="px-4.5 py-3">
+          <div className="absolute -right-27 mt-2.5 flex h-90 w-75 flex-col rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark sm:right-0 sm:w-80">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4.5 py-3">
               <h5 className="text-sm font-medium text-bodydark2">
-                Notification
+                Notifications
               </h5>
+              {jobs.length > 0 && (
+                <span className="text-xs text-bodydark">
+                  {jobs.filter((j) => j.status === 'COMPLETED').length} completed
+                </span>
+              )}
             </div>
 
+            {/* Notification list */}
             <ul className="flex h-auto flex-col overflow-y-auto">
-              <li>
-                <Link
-                  className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-                  to="#"
-                >
-                  <p className="text-sm">
-                    <span className="text-black dark:text-white">
-                      Edit your information in a swipe
-                    </span>{' '}
-                    Sint occaecat cupidatat non proident, sunt in culpa qui
-                    officia deserunt mollit anim.
+              {jobs.length === 0 ? (
+                <li className="flex flex-col items-center justify-center gap-2 px-4.5 py-8 text-center">
+                  <span className="text-2xl">🔔</span>
+                  <p className="text-sm text-bodydark">
+                    No activity yet. Submit a Coverage Report or Success Estimator to get started.
                   </p>
+                </li>
+              ) : (
+                jobs.map((job) => (
+                  <li key={job.id}>
+                    <Link
+                      className={`flex flex-col gap-1.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4 ${
+                        !job.seen && (job.status === 'COMPLETED' || job.status === 'FAILED')
+                          ? 'bg-gray-2 dark:bg-meta-4'
+                          : ''
+                      }`}
+                      to={job.status === 'COMPLETED' ? detailLink(job) : '#'}
+                    >
+                      {/* Type + Status row */}
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-black dark:text-white uppercase tracking-wider">
+                          <span>{typeIcon(job.type)}</span>
+                          {typeLabel(job.type)}
+                        </span>
+                        <span className={`text-xs font-bold uppercase tracking-widest ${statusColor(job.status)}`}>
+                          {job.status === 'QUEUED' || job.status === 'PROCESSING' ? (
+                            <span className="flex items-center gap-1">
+                              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-warning" />
+                              {job.status}
+                            </span>
+                          ) : job.status === 'COMPLETED' ? (
+                            <span className="flex items-center gap-1">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-meta-3" />
+                              COMPLETE
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-meta-1" />
+                              {job.status}
+                            </span>
+                          )}
+                        </span>
+                      </div>
 
-                  <p className="text-xs">12 May, 2025</p>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-                  to="#"
-                >
-                  <p className="text-sm">
-                    <span className="text-black dark:text-white">
-                      It is a long established fact
-                    </span>{' '}
-                    that a reader will be distracted by the readable.
-                  </p>
+                      {/* Project name + score */}
+                      <p className="text-sm text-black dark:text-white font-medium truncate">
+                        {job.title || job.projectName}
+                        {job.status === 'COMPLETED' && job.score !== undefined && (
+                          <span className="ml-2 text-xs font-bold text-meta-3">
+                            Score: {job.score}
+                          </span>
+                        )}
+                      </p>
 
-                  <p className="text-xs">24 Feb, 2025</p>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-                  to="#"
-                >
-                  <p className="text-sm">
-                    <span className="text-black dark:text-white">
-                      There are many variations
-                    </span>{' '}
-                    of passages of Lorem Ipsum available, but the majority have
-                    suffered
-                  </p>
+                      {/* Description line */}
+                      <p className="text-xs text-bodydark leading-relaxed">
+                        {job.status === 'QUEUED' || job.status === 'PROCESSING'
+                          ? `${typeLabel(job.type)} is being processed by the AI engine.`
+                          : job.status === 'COMPLETED'
+                          ? `Analysis complete. Click to view the full executive report.`
+                          : `Analysis encountered an error. Please resubmit.`}
+                      </p>
 
-                  <p className="text-xs">04 Jan, 2025</p>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  className="flex flex-col gap-2.5 border-t border-stroke px-4.5 py-3 hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
-                  to="#"
-                >
-                  <p className="text-sm">
-                    <span className="text-black dark:text-white">
-                      There are many variations
-                    </span>{' '}
-                    of passages of Lorem Ipsum available, but the majority have
-                    suffered
-                  </p>
-
-                  <p className="text-xs">01 Dec, 2024</p>
-                </Link>
-              </li>
+                      {/* Timestamp */}
+                      <p className="text-xs text-bodydark2">
+                        {job.status === 'COMPLETED' && job.completedAt
+                          ? formatDate(job.completedAt)
+                          : formatDate(job.timestamp)}
+                      </p>
+                    </Link>
+                  </li>
+                ))
+              )}
             </ul>
+
+            {/* Footer — clear history */}
+            {jobs.length > 0 && (
+              <div className="border-t border-stroke px-4.5 py-2.5 dark:border-strokedark">
+                <button
+                  onClick={() => {
+                    saveJobs([]);
+                    setJobs([]);
+                  }}
+                  className="text-xs text-bodydark hover:text-meta-1 transition-colors"
+                >
+                  Clear history
+                </button>
+              </div>
+            )}
           </div>
         )}
       </li>
