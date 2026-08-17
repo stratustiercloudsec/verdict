@@ -74,17 +74,6 @@ Key design decisions:
 - **Frontend:** React / Vite
 - **Precedent:** Architecture informed by [AirDate.TV](https://airdate.tv), a live, revenue-generating serverless AWS/Bedrock RAG platform built by the same team
 
-## Funding & Grants Status
-
-The Verdict is pursuing non-dilutive funding through the **NSF America's Seed Fund (SBIR/STTR)** program:
-
-- **Track:** STTR (requires a research-institution Co-PI with ≥30% budget subaward)
-- **Topic:** Artificial Intelligence — AI7 (Technologies for Trustworthy AI), secondary fit AI3 (Conversational AI)
-- **Status:** Project Pitch drafted (Technology Innovation, Technical Objectives & Challenges, Market Opportunity, Company & Team)
-- **Full proposal deadline:** 11/04/2026
-- **Research partner outreach:** Georgia Tech faculty (Prof. Pan Li — knowledge graphs for trustworthy/efficient LLMs; Prof. Chao Zhang — LLM agent calibration & uncertainty quantification)
-- **Supplemental funding:** Georgia FAST Grant application (Phase 0, up to $2,450 toward SBIR/STTR proposal costs)
-
 ## Positioning
 
 > Full-stack AI product built by a Senior Product Manager and AWS-certified AI/ML engineer, applying production lessons from AirDate.TV (a shipped, revenue-generating RAG platform) to a high-stakes creative industry: film and television investment decisions.
